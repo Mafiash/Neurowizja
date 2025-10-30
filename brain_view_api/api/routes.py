@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from app.models.user import User
-from app.services.user_service import get_users
+from brain_view_api.models.user import User
+from brain_view_api.services.user_service import get_users
 
 router = APIRouter()
 

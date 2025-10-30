@@ -1,6 +1,0 @@
-Flask
-SQLAlchemy
-Pydantic
-fastapi
-uvicorn
-python-dotenv
