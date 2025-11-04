@@ -41,3 +41,4 @@
 *.dwo
 
 ./Task01_BrainTumour
+.venv
