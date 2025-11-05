@@ -1,17 +1,7 @@
-from fastapi import APIRouter, HTTPException
-from brain_view_api.models.user import User
-from brain_view_api.services.user_service import get_users
+from fastapi import APIRouter
+from brain_view_api.api.users_api import router as users_router
+from brain_view_api.api.files_api import router as files_router 
 
-router = APIRouter()
-
-@router.get("/users")
-async def read_users():
-    users = get_users()
-    return users
-
-@router.get("/users/{user_id}")
-async def read_user(user_id: int):
-    user = get_users(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+api_router = APIRouter()
+api_router.include_router(users_router)
+api_router.include_router(files_router)

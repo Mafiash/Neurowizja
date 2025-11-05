@@ -1,11 +1,5 @@
 from fastapi import FastAPI
-from app.api.routes import router as api_router
-
-app = FastAPI(title="My API")
-
-# dodajemy wszystkie endpointy
-app.include_router(api_router, prefix="/api")
-
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+from brain_view_api.api.users_api import router as users_router
+from brain_view_api.api.routes import api_router 
+app = FastAPI()
+app.include_router(api_router)
