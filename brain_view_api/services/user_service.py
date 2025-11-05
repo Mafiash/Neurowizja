@@ -1,4 +1,4 @@
-from app.models.user import User
+from brain_view_api.models.user import User
 
 _users = [
     User(id=1, name="Alice", email="alice@example.com"),
