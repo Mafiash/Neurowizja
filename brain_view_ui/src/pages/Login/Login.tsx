@@ -2,18 +2,17 @@ import { Box, Button, TextField, Typography, Paper } from "@mui/material";
 import { useState } from "react";
 import React from "react";
 import { login } from "../../services/api_user.ts";
-import { useNavigate } from "react-router-dom";
 
 export const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    await login(username, password, navigate);
+    await login(username, password);
     setLoading(false);
   };
 

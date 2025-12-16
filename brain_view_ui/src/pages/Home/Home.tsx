@@ -56,7 +56,7 @@ export default function Home() {
             </ListItemIcon>
             <ListItemText primary="Ustawienia" />
           </ListItemButton>
-          <ListItemButton onClick={() => logout(navigate)}>
+          <ListItemButton onClick={() => logout()}>
             <ListItemIcon>
               <LogoutIcon />
             </ListItemIcon>
