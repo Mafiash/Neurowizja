@@ -36,16 +36,15 @@ engine = create_engine(connection_string)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Przykładowy model tabeli na skany (żeby nie używać raw SQL)
 class ScanMetadata(Base):
     __tablename__ = "Scans"
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String(255))
     upload_date = Column(DateTime, default=datetime.utcnow)
     user_id = Column(Integer, nullable=False) 
-       # Tutaj trzymamy tylko nazwę pliku w Blobie, nie cały plik!
 
-# Utworzenie tabel (jeśli nie istnieją)
+
+
 Base.metadata.create_all(bind=engine)
 
 def get_db():
@@ -73,7 +72,6 @@ class StorageManager:
             blob_client = self.blob_service_client.get_blob_client(
                 container=self.container_name, blob=filename
             )
-            # Ustawiamy wskaźnik pliku na początek (na wszelki wypadek)
             file.file.seek(0)
             blob_client.upload_blob(file.file, overwrite=True)
             logger.info(f"Plik {filename} został pomyślnie wgrany do Azure Blob Storage")
@@ -104,7 +102,6 @@ class StorageManager:
             print(f"Błąd SAS: {e}")
             raise HTTPException(status_code=500, detail="Błąd generowania linku")
 
-# Dependency Injection dla Storage Managera
 def get_storage():
     if not storage_conn_str or not container_name:
         raise HTTPException(status_code=500, detail="Brak konfiguracji Azure Storage w .env")

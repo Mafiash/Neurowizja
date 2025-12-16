@@ -23,7 +23,7 @@ from brain_view_api.services.nifti_and_storage import (
 from brain_view_api.utils.auth import get_current_user
 
 
-# ---------- A. NiftiValidator (lokalny wariant używany przez endpointy) ----------
+# ---------- A. NiftiValidator ----------
 
 class LocalNiftiValidator:
     def _load_img_from_bytes(self, file_bytes: bytes) -> nib.Nifti1Image:
@@ -108,8 +108,6 @@ class LocalAnnotationManager:
 
 router = APIRouter(prefix="/files", tags=["files"])
 
-# możesz korzystać z NiftiValidator z services, ale masz też LocalNiftiValidator powyżej;
-# dla spójności użyj jednego – tutaj użyjemy LocalNiftiValidator
 validator = LocalNiftiValidator()
 annotation_manager = LocalAnnotationManager(storage_service)
 
