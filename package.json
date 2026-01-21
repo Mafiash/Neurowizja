@@ -1,0 +1,13 @@
+{
+  "name": "brain-view-root",
+  "version": "1.0.0",
+  "scripts": {
+    "install-all": "npm install --prefix brain_view_ui && pip install -r requirements.txt",
+    "dev": "concurrently \"./brain_view_api/venv/bin/uvicorn brain_view_api.main:app --reload\" \"GENERATE_SOURCEMAP=false npm start --prefix brain_view_ui\"",
+    "start-api": "./brain_view_api/venv/bin/uvicorn brain_view_api.main:app --reload",
+    "start-ui": "npm start --prefix brain_view_ui"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

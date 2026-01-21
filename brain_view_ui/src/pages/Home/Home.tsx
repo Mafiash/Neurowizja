@@ -1,73 +1,64 @@
-import {
-  Box,
-  Drawer,
-  Avatar,
-  List,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  ListItemButton,
-} from "@mui/material";
-import FolderIcon from "@mui/icons-material/Folder";
-import SettingsIcon from "@mui/icons-material/Settings";
-import LogoutIcon from "@mui/icons-material/Logout";
+import { Box, Typography, Button, Paper, Grid, Card, CardContent, CardHeader, Avatar } from "@mui/material";
 import React from "react";
-import { logout } from "../../services/api_user.ts";
+import AutoGraphIcon from "@mui/icons-material/AutoGraph";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
-const drawerWidth = 240;
 
 export default function Home() {
   const navigate = useNavigate();
 
+  const features = [
+    {
+      title: "Analiza i Adnotacje",
+      desc: "Przeglądaj skany warstwa po warstwie i dodawaj precyzyjne adnotacje medyczne.",
+      icon: <SearchIcon sx={{ fontSize: 40, color: "secondary.main" }} />,
+      action: () => navigate("/home/scans"),
+    },
+  ];
+
   return (
-    <Box sx={{ display: "flex", height: "100vh" }}>
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
-            boxSizing: "border-box",
-          },
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            py: 3,
-          }}
+    <Box p={4} className="fade-in">
+      <Box mb={6}>
+        <Typography
+          variant="h3"
+          sx={{ fontWeight: 800, mb: 2, background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
         >
-          <Avatar sx={{ width: 80, height: 80, mb: 2 }} />
-        </Box>
-        <Divider />
-        <List>
-          <ListItemButton onClick={() => navigate("/home/scans")}>
-            <ListItemIcon>
-              <FolderIcon />
-            </ListItemIcon>
-            <ListItemText primary="Moje skany" />
-          </ListItemButton>
-          <ListItemButton>
-            <ListItemIcon>
-              <SettingsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Ustawienia" />
-          </ListItemButton>
-          <ListItemButton onClick={() => logout()}>
-            <ListItemIcon>
-              <LogoutIcon />
-            </ListItemIcon>
-            <ListItemText primary="Wyloguj" />
-          </ListItemButton>
-        </List>
-      </Drawer>
-      <Box
-        component="main"
-        sx={{ flexGrow: 1, bgcolor: "background.default", p: 3 }}
-      ></Box>
+          Witaj w Brain View
+        </Typography>
+        <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700 }}>
+          Zaawansowane narzędzie do wizualizacji i adnotacji obrazów MRI wspierane przez cloud computing.
+        </Typography>
+      </Box>
+
+      <Grid container spacing={4}>
+        {features.map((f, i) => (
+          <Grid size={{ xs: 12, md: 4 }} key={i}>
+            <Card
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                transition: "transform 0.2s",
+                "&:hover": { transform: "translateY(-8px)" },
+              }}
+            >
+              <CardContent sx={{ flexGrow: 1, p: 4 }}>
+                <Box mb={3}>{f.icon}</Box>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
+                  {f.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" mb={4}>
+                  {f.desc}
+                </Typography>
+                <Button variant="outlined" onClick={f.action}>
+                  Rozpocznij
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
     </Box>
   );
 }

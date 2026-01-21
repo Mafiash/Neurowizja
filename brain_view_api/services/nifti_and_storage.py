@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 import nibabel as nib
 from azure.storage.blob import BlobServiceClient, BlobSasPermissions, generate_blob_sas
+from sqlalchemy.orm import Session
 
 from brain_view_api.db.database import storage_conn_str, container_name, SessionLocal
 from brain_view_api.models.mri_image import MedicalScan, Annotation, Plane
@@ -59,7 +60,15 @@ class NiftiValidator:
 # ---------- B. StorageService ----------
 
 class StorageService:
-    def __init__(self, connection_string: str, container: str):
+    def __init__(self, connection_string: str | None, container: str | None):
+        if not connection_string or not container:
+            print("⚠️ Warning: Azure Storage connection string or container name is missing. Storage functionality will be disabled.")
+            self._blob_service = None
+            self._container_name = container
+            self._account_name = None
+            self._account_key = None
+            return
+
         self._blob_service = BlobServiceClient.from_connection_string(connection_string)
         self._container_name = container
 
@@ -86,6 +95,11 @@ class StorageService:
         blob_client = self._blob_service.get_blob_client(self._container_name, filename)
         blob_client.upload_blob(json.dumps(json_data).encode("utf-8"), overwrite=True)
         return filename
+
+    def delete_blob(self, filename: str) -> None:
+        blob_client = self._blob_service.get_blob_client(self._container_name, filename)
+        if blob_client.exists():
+            blob_client.delete_blob()
 
     def generate_sas_token(self, blob_name: str, minutes: int = 60) -> str:
         """
@@ -132,10 +146,11 @@ class AnnotationManager:
     def __init__(self, storage: StorageService):
         self.storage = storage
 
-    def save_annotation(self, user: User, data: AnnotationCreateDTO) -> Annotation:
+    def save_annotation(self, user: User, data: AnnotationCreateDTO, db: Session, screenshot_bytes: bytes = None) -> Annotation:
         """
         - tworzy JSON z punktami obrysu,
         - wysyła do Azure Blob Storage,
+        - wysyła screenshot (jesli jest) do Azure Blob Storage,
         - zapisuje rekord Annotation w SQL.
         """
         # 1. przygotuj JSON
@@ -149,15 +164,28 @@ class AnnotationManager:
             "created_at": datetime.utcnow().isoformat(),
         }
 
-        # 2. nazwa pliku dla bloba
-        filename = (
-            f"annotations/"
-            f"{data.scan_id}_{user.id}_{data.slice}_{data.plane}_"
-            f"{int(datetime.utcnow().timestamp())}.json"
-        )
-        self.storage.upload_annotation(json_payload, filename)
+        timestamp = int(datetime.utcnow().timestamp())
+        base_filename = f"{data.scan_id}_{user.id}_{data.slice}_{data.plane}_{timestamp}"
 
-        db: SessionLocal = SessionLocal()
+        # 2. nazwa pliku dla bloba (JSON)
+        json_filename = f"annotations/{base_filename}.json"
+        self.storage.upload_annotation(json_payload, json_filename)
+
+        # 3. upload screenshot (jesli jest)
+        snapshot_path = None
+        if screenshot_bytes:
+            png_filename = f"annotations/{base_filename}.png"
+            # Uzywamy upload_scan bo to generic upload bajtów
+            self.storage.upload_scan(screenshot_bytes, png_filename)
+            snapshot_path = png_filename
+
+        # 4. Zapis do DB
+        # Uzywamy przekazanej sesji db zamiast tworzyc nowa jesli to mozliwe,
+        # ale w kodzie wyzej bylo SessionLocal().
+        # Skoro tutaj dostajemy db w argumencie (w poprzedniej wersji bylo db: Session w sygnaturze ale nie uzywane w ciele metody,
+        # tworzyl nowa sesje SessionLocal. Poprawmy to zeby uzywac przekazanej sesji jesli jest.
+        # W files_api przekazujemy db.
+
         try:
             scan = db.query(MedicalScan).filter(MedicalScan.id == data.scan_id).first()
             if not scan:
@@ -173,12 +201,14 @@ class AnnotationManager:
                 author_id=user.id,
                 slice_index=data.slice,
                 plane=plane_enum,
-                blob_path=filename,
+                blob_path=json_filename,
+                snapshot_path=snapshot_path,
                 note_text=data.note,
             )
             db.add(ann)
             db.commit()
             db.refresh(ann)
             return ann
-        finally:
-            db.close()
+        except Exception as e:
+            db.rollback()
+            raise e

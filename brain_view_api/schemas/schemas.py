@@ -20,10 +20,8 @@ class ScanMetadataDTO(BaseModel):
     modality: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-
-# ---------- AnnotationCreateDTO ----------
 
 class AnnotationCreateDTO(BaseModel):
     scan_id: int
@@ -31,6 +29,37 @@ class AnnotationCreateDTO(BaseModel):
     plane: Literal["strzalkowa", "czolowa", "poprzeczna", "axial", "coronal", "sagittal"]
     points: List[List[float]]  # [[x,y], [x,y], ...]
     note: Optional[str] = None
+
+
+# ---------- AnnotationDTO ----------
+
+class AnnotationDTO(BaseModel):
+    id: int
+    scan_id: int
+    author_id: int
+    author_name: Optional[str] = None # Nowa kolumna
+    slice_index: int
+    plane: str
+    blob_path: str
+    snapshot_path: Optional[str] = None # Sciezka do screenshota
+    snapshot_url: Optional[str] = None # URL SAS do screenshota
+    note_text: Optional[str]
+    points: Optional[List[List[float]]] = None # Nowe pole z danymi obrysu
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AnnotationExtendedDTO(AnnotationDTO):
+    scan_filename: Optional[str] = None
+
+
+class BulkImportResponseDTO(BaseModel):
+    total: int
+    success: int
+    failed: int
+    errors: List[str]
 
 
 # ---------- ScanResponseDTO ----------

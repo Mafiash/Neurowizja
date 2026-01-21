@@ -60,6 +60,7 @@ class Annotation(Base):
 
     # ścieżka/nazwa bloba JSON w Azure (z punktami obrysu)
     blob_path = Column(String(512), nullable=False)
+    snapshot_path = Column(String(512), nullable=True)  # Path to screenshot in blob storage
 
     note_text = Column(Text, nullable=True)
 

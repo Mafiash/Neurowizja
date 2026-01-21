@@ -1,0 +1,26 @@
+[
+  {
+    "scan_id": 1,
+    "slice": 50,
+    "plane": "poprzeczna",
+    "points": [
+      [100, 100],
+      [150, 100],
+      [150, 150],
+      [100, 150]
+    ],
+    "note": "Przykładowa adnotacja 1"
+  },
+  {
+    "scan_id": 1,
+    "slice": 60,
+    "plane": "poprzeczna",
+    "points": [
+      [120, 120],
+      [170, 120],
+      [170, 170],
+      [120, 170]
+    ],
+    "note": "Przykładowa adnotacja 2"
+  }
+]

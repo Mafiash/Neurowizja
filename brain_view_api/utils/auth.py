@@ -59,21 +59,23 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
 
     token = authorization.replace("Bearer ", "").strip()
 
-    # DEBUG: wszystkie sesje
-    log = db.execute(text("SELECT * FROM dbo.Sessions")).fetchall()
-    print("🔑 Weryfikacja tokena:", token, log)
-    print("SECRET_KEY:", SECRET_KEY, "ALG:", ALGORITHM)
+    token = authorization.replace("Bearer ", "").strip()
 
-    session = db.execute(
-        text("SELECT * FROM dbo.Sessions WHERE token = :t"),
-        {"t": token}
-    ).fetchone()
+    try:
+        from brain_view_api.models.user import DBSession
+        session = db.query(DBSession).filter(DBSession.token == token).first()
+    except Exception as e:
+        print(f"❌ Database error in auth: {e}")
+        raise HTTPException(
+            status_code=503, 
+            detail="Problem z bazą danych."
+        )
 
     if not session:
-        raise HTTPException(status_code=401, detail="Sesja nieaktywna lub wylogowana")
+        raise HTTPException(status_code=401, detail="Sesja nieaktywna")
 
     if session.expires_at < datetime.utcnow():
-        db.execute(text("DELETE FROM dbo.Sessions WHERE token=:t"), {"t": token})
+        db.delete(session)
         db.commit()
         raise HTTPException(status_code=401, detail="Sesja wygasła")
 
@@ -83,8 +85,14 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
         username = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Niepoprawny token")
+            
+        from brain_view_api.models.user import User
+        user = db.query(User).filter(User.id == session.user_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Użytkownik nie istnieje")
+            
     except JWTError as e:
         print("JWTError:", repr(e))
         raise HTTPException(status_code=401, detail="Niepoprawny token " + repr(e))
 
-    return {"user_id": session.user_id, "username": username}
+    return {"user_id": session.user_id, "username": username, "is_admin": user.is_admin}

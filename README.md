@@ -6,14 +6,44 @@ Projekt na 5 semestr Inżynierii Oprogramowania. Brain_view zakłada rendering 3
 
 ## Instrukcja instalacji i uruchomienia
 
-Aby uruchomić aplikację Brain_view, potrzebujesz zainstalowanego Pythona (najlepiej 3.8 lub nowszego), Node.js (najlepiej 18 lub nowszego) oraz npm (instaluje się razem z Node.js). Jeśli masz git, możesz pobrać projekt poleceniem `git clone <adres_repozytorium>`, w przeciwnym razie pobierz ZIP i rozpakuj.
+Aby uruchomić aplikację Brain_view, potrzebujesz zainstalowanego Pythona (3.8+), Node.js (18+) oraz npm.
 
-Najpierw zainstaluj backend (API). Otwórz terminal, przejdź do katalogu `brain_view_api` poleceniem `cd brain_view_api`. Opcjonalnie utwórz środowisko wirtualne: `python3 -m venv venv` i aktywuj je: `source venv/bin/activate`. Następnie zainstaluj wymagane pakiety: `pip install -r requirements.txt`.
+### 1. Instalacja zależności
 
-Teraz zainstaluj frontend (UI). Otwórz drugi terminal, przejdź do katalogu `brain_view_ui` poleceniem `cd brain_view_ui` i zainstaluj zależności: `npm install`.
+**Backend (API):**
 
-Aby uruchomić aplikację, wpisz `npm run dev`.
+```bash
+cd brain_view_api
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-Po uruchomieniu aplikacji frontend będzie dostępny pod adresem [http://localhost:3000](http://localhost:3000), a backend (API) pod adresem [http://localhost:8000](http://localhost:8000). Jeśli pojawią się problemy, sprawdź czy masz zainstalowane wszystkie wymagane pakiety (`pip install -r requirements.txt` i `npm install`). Jeśli port 3000 lub 8000 jest zajęty, zamknij inne aplikacje lub zmień port w konfiguracji. Jeśli nie masz `uvicorn`, zainstaluj go poleceniem `pip install uvicorn`.
+**Frontend (UI):**
 
-W razie problemów napisz do autora lub zespołu. Powodzenia!
+```bash
+cd brain_view_ui
+npm install
+```
+
+### 2. Uruchamianie aplikacji
+
+Możesz uruchomić całą aplikację (backend + frontend) jednym poleceniem z katalogu głównego projektu:
+
+```bash
+npm run dev
+```
+
+_(Wymaga zainstalowanych zależności w obu folderach)._
+
+Alternatywnie, możesz uruchomić je osobno:
+
+- **Backend:** `cd brain_view_api && uvicorn main:app --reload` (lub z katalogu głównego: `uvicorn brain_view_api.main:app --reload`)
+- **Frontend:** `cd brain_view_ui && npm start`
+
+### 3. Dostęp do aplikacji
+
+- **Frontend:** [http://localhost:3000](http://localhost:3000)
+- **Backend (API):** [http://localhost:8000](http://localhost:8000)
+
+Jeśli pojawią się problemy z połączeniem z bazą danych, sprawdź plik `brain_view_api/config/.env`. Aplikacja uruchomi się nawet jeśli baza danych jest nieosiągalna (z ostrzeżeniem w konsoli).

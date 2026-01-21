@@ -8,9 +8,6 @@ from datetime import datetime, timedelta
 # Importy dla Azure Blob Storage
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 import logging
-
-app = FastAPI()
-
 # --- 1. KONFIGURACJA ZMIENNYCH ŚRODOWISKOWYCH ---
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config", ".env")
 load_dotenv(dotenv_path)
@@ -25,27 +22,53 @@ password = os.getenv("DB_USERNAME_PASSWORD")
 storage_conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 container_name = os.getenv("AZURE_CONTAINER_NAME")
 
-# --- 2. KONFIGURACJA BAZY DANYCH (SQL) ---
-driver = "ODBC Driver 18 for SQL Server"
-connection_string = (
-    f"mssql+pyodbc://{username}:{password}@{server}:1433/{database}"
-    f"?driver={driver.replace(' ', '+')}&Encrypt=yes&TrustServerCertificate=no"
-)
+# --- 2. KONFIGURACJA BAZY DANYCH ---
+def create_app_engine():
+    import urllib.parse
+    import socket
+    driver = "ODBC Driver 18 for SQL Server"
+    
+    # Próba rozwiązania nazwy hosta na IP
+    try:
+        target_server = socket.gethostbyname(server) if server else None
+        print(f"🌐 Resolved {server} to {target_server}")
+    except Exception as e:
+        print(f"⚠️ DNS resolution failed for {server}: {e}. Using fallback IP 20.62.58.131")
+        target_server = "20.62.58.131"
+        
+    user_full = f"{username}@{server.split('.')[0]}"
+    
+    params = urllib.parse.quote_plus(
+        f"DRIVER={{{driver}}};"
+        f"SERVER={target_server};"
+        f"DATABASE={database};"
+        f"UID={user_full};"
+        f"PWD={password};"
+        f"Encrypt=yes;"
+        f"TrustServerCertificate=yes;"
+        f"Connection Timeout=30;"
+    )
+    conn_str = f"mssql+pyodbc:///?odbc_connect={params}"
+    
+    return create_engine(conn_str)
 
-engine = create_engine(connection_string)
+
+
+engine = create_app_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-class ScanMetadata(Base):
-    __tablename__ = "Scans"
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String(255))
-    upload_date = Column(DateTime, default=datetime.utcnow)
-    user_id = Column(Integer, nullable=False) 
+def init_db():
+    # Importy wewnątrz funkcji zapobiegają circular import
+    from brain_view_api.models import user, mri_image
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("📋 Tabele bazy danych (Users, Sessions, MedicalScans, Annotations) są gotowe.")
+    except Exception as e:
+        print(f"⚠️ Błąd podczas tworzenia tabel: {e}")
 
-
-
-Base.metadata.create_all(bind=engine)
+# Inicjalizacja przy imporcie modułu
+init_db()
 
 def get_db():
     db = SessionLocal()
