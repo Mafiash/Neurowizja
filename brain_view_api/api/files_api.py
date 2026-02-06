@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Form
 from sqlalchemy.orm import Session
 
 from brain_view_api.db.database import SessionLocal, get_db
-from brain_view_api.models.mri_image import MedicalScan, Annotation, Plane
+from brain_view_api.models.mri_image import MedicalScan, Annotation, Plane, Comment
 from brain_view_api.models.user import User
 from brain_view_api.schemas.schemas import (
     AnnotationCreateDTO,
@@ -18,6 +18,8 @@ from brain_view_api.schemas.schemas import (
     BulkImportResponseDTO,
     ScanMetadataDTO,
     ScanResponseDTO,
+    CommentCreateDTO,
+    CommentDTO,
 )
 from brain_view_api.services.nifti_and_storage import (
     NiftiValidator,
@@ -210,6 +212,7 @@ async def create_annotation(
             snapshot_url=snapshot_url,
             note_text=ann.note_text,
             points=data.points,
+            comments=[],
             created_at=ann.created_at
         )
         return dto
@@ -230,7 +233,7 @@ def get_annotations(scan_id: int, db: Session = Depends(get_db)):
     
     results = db.query(Annotation, User.email).join(
         User, Annotation.author_id == User.id
-    ).filter(Annotation.scan_id == scan_id).all()
+    ).filter(Annotation.scan_id == scan_id).order_by(Annotation.created_at.desc()).all()
 
     print(f"🔍 [BACKEND] Znaleziono adnotacji: {len(results)}")
     
@@ -255,6 +258,16 @@ def get_annotations(scan_id: int, db: Session = Depends(get_db)):
             snapshot_url=snapshot_url,
             note_text=ann.note_text,
             points=None,
+            comments=[
+                CommentDTO(
+                    id=c.id,
+                    annotation_id=c.annotation_id,
+                    author_id=c.author_id,
+                    author_name=c.author.email,
+                    text=c.text,
+                    created_at=c.created_at
+                ) for c in ann.comments
+            ],
             created_at=ann.created_at
         )
 
@@ -283,7 +296,7 @@ def get_all_annotations(db: Session = Depends(get_db)):
         User, Annotation.author_id == User.id
     ).join(
         MedicalScan, Annotation.scan_id == MedicalScan.id
-    ).all()
+    ).order_by(Annotation.created_at.desc()).all()
 
     dto_list = []
     for ann, email, scan_file in results:
@@ -307,6 +320,16 @@ def get_all_annotations(db: Session = Depends(get_db)):
             snapshot_url=snapshot_url,
             note_text=ann.note_text,
             points=None,
+            comments=[
+                CommentDTO(
+                    id=c.id,
+                    annotation_id=c.annotation_id,
+                    author_id=c.author_id,
+                    author_name=c.author.email,
+                    text=c.text,
+                    created_at=c.created_at
+                ) for c in ann.comments
+            ],
             created_at=ann.created_at
         )
         dto_list.append(dto)
@@ -431,7 +454,41 @@ def generate_outline(
             blob_path=ann.blob_path,
             note_text=ann.note_text,
             points=points, # Wygenerowane punkty
-            created_at=ann.created_at
+            created_at=ann.created_at,
+            comments=[]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd zapisu wygenerowanego obrysu: {e}")
+
+@router.post("/annotations/{ann_id}/comments/", response_model=CommentDTO)
+def create_comment(
+    ann_id: int,
+    data: CommentCreateDTO,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    ann = db.query(Annotation).filter(Annotation.id == ann_id).first()
+    if not ann:
+        raise HTTPException(status_code=404, detail="Adnotacja nie znaleziona")
+
+    user = db.query(User).filter(User.id == current_user["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Użytkownik nie znaleziony")
+
+    new_comment = Comment(
+        annotation_id=ann_id,
+        author_id=user.id,
+        text=data.text
+    )
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+
+    return CommentDTO(
+        id=new_comment.id,
+        annotation_id=new_comment.annotation_id,
+        author_id=new_comment.author_id,
+        author_name=user.email,
+        text=new_comment.text,
+        created_at=new_comment.created_at
+    )

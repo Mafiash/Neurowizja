@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Button,
   Box,
@@ -38,7 +39,7 @@ import UndoIcon from "@mui/icons-material/Undo";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { uploadScan, getUserScans, getScanUrl, saveAnnotation, getScanAnnotations, deleteAnnotation, generateOutline } from "../../services/api_files.ts";
+import { uploadScan, getUserScans, getScanUrl, saveAnnotation, getScanAnnotations, deleteAnnotation, generateOutline, addComment } from "../../services/api_files.ts";
 import type { ScanMetadataDTO, AnnotationDTO } from "../../services/api_files.ts";
 import NiiVue, { NiiVueHandle } from "../../components/NiiVue.tsx"; // Import Interface
 import React from "react";
@@ -66,7 +67,9 @@ export const Scans: React.FC = () => {
 
   // Layout
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showAnnotations, setShowAnnotations] = useState(true);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
   const niiVueRef = useRef<NiiVueHandle>(null);
 
   const fetchScans = async () => {
@@ -84,6 +87,20 @@ export const Scans: React.FC = () => {
   useEffect(() => {
     fetchScans();
   }, []);
+
+  // Handle URL Params for deep linking
+  useEffect(() => {
+    const scanId = searchParams.get("scan_id");
+    const plane = searchParams.get("plane") as "axial" | "coronal" | "sagittal";
+
+    if (scanId) {
+      handleSelectScan(parseInt(scanId));
+    }
+    if (plane) {
+      setSlicePlane(plane);
+      setViewMode("2d");
+    }
+  }, [searchParams]);
 
   const handleUpload = async (file: File) => {
     setLoading(true);
@@ -119,12 +136,12 @@ export const Scans: React.FC = () => {
       // 1. Capture screenshot
       const screenshotElem = await niiVueRef.current?.getScreenshot();
 
-      await saveAnnotation(
+      const newAnn = await saveAnnotation(
         {
           scan_id: selectedScanId,
           slice: capturedSlice,
           plane: slicePlane,
-          points: capturedStrokes.length > 0 ? capturedStrokes.flat() : [[0, 0]],
+          points: capturedStrokes.length > 0 ? capturedStrokes.flat() : [],
           note: note,
         },
         screenshotElem,
@@ -134,8 +151,8 @@ export const Scans: React.FC = () => {
       setCapturedSlice(0);
 
       setNote("");
-      const anns = await getScanAnnotations(selectedScanId);
-      setAnnotations(anns);
+      // Add new annotation to the top of the list
+      setAnnotations((prev) => [newAnn, ...prev]);
     } catch (err) {
       console.error(err);
     }
@@ -176,10 +193,8 @@ export const Scans: React.FC = () => {
     if (!window.confirm("Czy na pewno chcesz usunąć tę adnotację?")) return;
     try {
       await deleteAnnotation(annId);
-      if (selectedScanId) {
-        const anns = await getScanAnnotations(selectedScanId);
-        setAnnotations(anns);
-      }
+      // Remove from local state immediately
+      setAnnotations((prev) => prev.filter((a) => a.id !== annId));
     } catch (err) {
       console.error("Failed to delete annotation:", err);
     }
@@ -189,9 +204,9 @@ export const Scans: React.FC = () => {
     if (!selectedScanId) return;
     setLoading(true);
     try {
-      await generateOutline(selectedScanId, 0, slicePlane);
-      const anns = await getScanAnnotations(selectedScanId);
-      setAnnotations(anns);
+      const newAnn = await generateOutline(selectedScanId, 0, slicePlane);
+      // Add to local state immediately at the top
+      setAnnotations((prev) => [newAnn, ...prev]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -424,6 +439,7 @@ export const Scans: React.FC = () => {
                 dragMode={dragMode}
                 colormap={colormap}
                 annotations={annotations}
+                showAnnotations={showAnnotations}
                 penColor={penColor}
                 penWidth={penWidth}
                 pendingStrokes={capturedStrokes}
@@ -476,6 +492,10 @@ export const Scans: React.FC = () => {
 
             <Button variant="outlined" fullWidth onClick={handleGenerateOutline} disabled={!selectedScanId} sx={{ py: 1, borderColor: "secondary.main", color: "secondary.main" }}>
               Generuj Obrys
+            </Button>
+
+            <Button variant={showAnnotations ? "contained" : "outlined"} color="info" fullWidth onClick={() => setShowAnnotations(!showAnnotations)} sx={{ py: 1 }}>
+              {showAnnotations ? "Ukryj Adnotacje" : "Pokaż Adnotacje"}
             </Button>
 
             <Divider />
@@ -540,6 +560,51 @@ export const Scans: React.FC = () => {
                       >
                         Usuń
                       </Button>
+                    </Box>
+
+                    {/* Sekcja komentarzy */}
+                    <Divider sx={{ my: 1 }} />
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 700, mb: 1, display: "block" }}>
+                        Komentarze ({ann.comments?.length || 0})
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {ann.comments?.map((comment) => (
+                          <Box key={comment.id} sx={{ mb: 1, bgcolor: "#f8fafc", p: 1, borderRadius: 1 }}>
+                            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                {comment.author_name}
+                              </Typography>
+                              <Typography variant="caption" color="text.disabled" sx={{ fontSize: "10px" }}>
+                                {new Date(comment.created_at).toLocaleString()}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" sx={{ fontSize: "12px" }}>
+                              {comment.text}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </List>
+                      <Box sx={{ display: "flex", gap: 1, mt: 1 }} onClick={(e) => e.stopPropagation()}>
+                        <TextField
+                          size="small"
+                          placeholder="Dodaj komentarz..."
+                          fullWidth
+                          sx={{ "& .MuiInputBase-input": { fontSize: "12px", py: 0.5 } }}
+                          onKeyDown={async (e) => {
+                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                              const text = (e.target as HTMLInputElement).value;
+                              (e.target as HTMLInputElement).value = "";
+                              try {
+                                const newComment = await addComment(ann.id, text);
+                                setAnnotations((prev) => prev.map((a) => (a.id === ann.id ? { ...a, comments: [...(a.comments || []), newComment] } : a)));
+                              } catch (err) {
+                                console.error("Failed to add comment:", err);
+                              }
+                            }
+                          }}
+                        />
+                      </Box>
                     </Box>
                   </Paper>
                 ))

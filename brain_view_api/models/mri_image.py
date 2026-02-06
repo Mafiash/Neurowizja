@@ -68,3 +68,17 @@ class Annotation(Base):
 
     scan = relationship("MedicalScan", back_populates="annotations")
     author = relationship("User", back_populates="annotations")
+    comments = relationship("Comment", back_populates="annotation", cascade="all,delete-orphan")
+
+
+class Comment(Base):
+    __tablename__ = "Comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    annotation_id = Column(Integer, ForeignKey("Annotations.id"), nullable=False)
+    author_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
+    text = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    annotation = relationship("Annotation", back_populates="comments")
+    author = relationship("User")

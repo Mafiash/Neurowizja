@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Typography, Modal, Upload, message, Tag, List, Collapse, Divider } from "antd";
+import { Table, Button, Space, Typography, Modal, Upload, message, Tag, List, Collapse, Divider, Popover, Image } from "antd";
 import { UploadOutlined, BugOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { getAllAnnotations, bulkUploadAnnotations, deleteAnnotation, AnnotationExtendedDTO, BulkImportResponseDTO } from "../../services/api_files.ts";
 import dayjs from "dayjs";
@@ -80,10 +80,21 @@ export const Annotations: React.FC = () => {
       title: "Skan (Plik)",
       dataIndex: "scan_filename",
       key: "scan_filename",
-      render: (text: string) => (
-        <Text copyable ellipsis={{ tooltip: text }}>
-          {text}
-        </Text>
+      render: (text: string, record: AnnotationExtendedDTO) => (
+        <Space>
+          {record.snapshot_url ? (
+            <Image src={record.snapshot_url} width={40} style={{ borderRadius: 4, cursor: "pointer" }} preview={{ mask: <VisibilityIcon style={{ fontSize: 12 }} /> }} />
+          ) : (
+            <Box sx={{ width: 40, height: 40, bgcolor: "#f1f5f9", borderRadius: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Typography variant="caption" color="text.disabled">
+                N/A
+              </Typography>
+            </Box>
+          )}
+          <Text copyable ellipsis={{ tooltip: text }}>
+            {text}
+          </Text>
+        </Space>
       ),
     },
     {
@@ -117,12 +128,49 @@ export const Annotations: React.FC = () => {
       render: (text: string) => text || <Text type="secondary">brak</Text>,
     },
     {
+      title: "Komentarze",
+      dataIndex: "comments",
+      key: "comments",
+      render: (comments: any[]) => (
+        <Popover
+          title="Lista komentarzy"
+          content={
+            <List
+              size="small"
+              dataSource={comments}
+              renderItem={(c: any) => (
+                <List.Item>
+                  <Box>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5, gap: 2 }}>
+                      <Text strong>{c.author_name}</Text>
+                      <Text type="secondary" style={{ fontSize: "10px" }}>
+                        {dayjs(c.created_at).format("YYYY-MM-DD HH:mm")}
+                      </Text>
+                    </Box>
+                    <Text size="small">{c.text}</Text>
+                  </Box>
+                </List.Item>
+              )}
+              locale={{ emptyText: "Brak komentarzy" }}
+              style={{ maxWidth: 300 }}
+            />
+          }
+          trigger="click"
+        >
+          <Tag color="orange" style={{ cursor: "pointer" }}>
+            {comments?.length || 0}
+          </Tag>
+        </Popover>
+      ),
+      sorter: (a: any, b: any) => (a.comments?.length || 0) - (b.comments?.length || 0),
+    },
+    {
       title: "Akcje",
       key: "actions",
       render: (_: any, record: AnnotationExtendedDTO) => (
         <Space size="middle">
           <Tooltip title="Zobacz skan">
-            <IconButton size="small" onClick={() => navigate(`/home/scans?scan_id=${record.scan_id}`)}>
+            <IconButton size="small" onClick={() => navigate(`/home/scans?scan_id=${record.scan_id}&plane=${record.plane.toLowerCase()}`)}>
               <VisibilityIcon fontSize="small" />
             </IconButton>
           </Tooltip>

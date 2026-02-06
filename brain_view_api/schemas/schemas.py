@@ -31,6 +31,20 @@ class AnnotationCreateDTO(BaseModel):
     note: Optional[str] = None
 
 
+class CommentCreateDTO(BaseModel):
+    text: str
+
+class CommentDTO(BaseModel):
+    id: int
+    annotation_id: int
+    author_id: int
+    author_name: Optional[str] = None
+    text: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # ---------- AnnotationDTO ----------
 
 class AnnotationDTO(BaseModel):
@@ -45,6 +59,7 @@ class AnnotationDTO(BaseModel):
     snapshot_url: Optional[str] = None # URL SAS do screenshota
     note_text: Optional[str]
     points: Optional[List[List[float]]] = None # Nowe pole z danymi obrysu
+    comments: List[CommentDTO] = []
     created_at: datetime
 
     class Config:

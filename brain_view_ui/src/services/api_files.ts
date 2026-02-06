@@ -22,6 +22,15 @@ export interface ScanResponseDTO {
   expires_at: string;
 }
 
+export interface CommentDTO {
+  id: number;
+  annotation_id: number;
+  author_id: number;
+  author_name?: string;
+  text: string;
+  created_at: string;
+}
+
 // AnnotationDTO z backendu
 export interface AnnotationDTO {
   id: number;
@@ -35,6 +44,7 @@ export interface AnnotationDTO {
   snapshot_url?: string;
   note_text: string | null;
   points?: number[][];
+  comments: CommentDTO[];
   created_at: string;
 }
 
@@ -157,5 +167,13 @@ export async function getAllAnnotations(): Promise<AnnotationExtendedDTO[]> {
 // =======================
 export async function bulkUploadAnnotations(data: AnnotationCreateDTO[]): Promise<BulkImportResponseDTO> {
   const res = await api.post<BulkImportResponseDTO>(`${API_BASE_URL}/annotations/bulk/`, data);
+  return res.data;
+}
+
+// =======================
+// 10. Dodawanie komentarza do adnotacji
+// =======================
+export async function addComment(annId: number, text: string): Promise<CommentDTO> {
+  const res = await api.post<CommentDTO>(`${API_BASE_URL}/annotations/${annId}/comments/`, { text });
   return res.data;
 }

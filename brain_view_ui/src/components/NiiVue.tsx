@@ -16,7 +16,10 @@ interface NiiVueProps {
   onDeleteAnnotation?: (index: number) => void;
   penColor?: string;
   penWidth?: number;
-  pendingStrokes?: number[][][]; // Strokes for backward compat, but we might want to store more info
+  showAnnotations?: boolean;
+  pendingStrokes?: number[][][]; // Now in VOXEL indices
+  pendingSlice?: number;
+  pendingPlane?: string;
 }
 
 export interface NiiVueHandle {
@@ -39,7 +42,10 @@ export const NiiVue = React.forwardRef<NiiVueHandle, NiiVueProps>(
       onDeleteAnnotation,
       penColor = "#22c55e",
       penWidth = 2,
+      showAnnotations = true,
       pendingStrokes = [],
+      pendingSlice = 0,
+      pendingPlane = "axial",
     },
     ref,
   ) => {
@@ -112,8 +118,7 @@ export const NiiVue = React.forwardRef<NiiVueHandle, NiiVueProps>(
         }
 
         // 5. Draw Existing Annotations
-        // These are currently in outlinePaths (strings)
-        if (outlinePaths && outlinePaths.length > 0) {
+        if (showAnnotations && outlinePaths && outlinePaths.length > 0) {
           ctx.strokeStyle = "#22c55e"; // Green for saved
           ctx.lineWidth = 2;
           ctx.setLineDash([4, 2]);
@@ -186,39 +191,71 @@ export const NiiVue = React.forwardRef<NiiVueHandle, NiiVueProps>(
     // Defined outside initialization to be accessible
     const updateOutlines = (nv: Niivue) => {
       const currentAnnotations = annotationsRef.current;
-      // console.log("updateOutlines", currentAnnotations);
 
-      if (!nv || !currentAnnotations || currentAnnotations.length === 0) {
+      if (!nv || !showAnnotations || !currentAnnotations || currentAnnotations.length === 0) {
         setOutlinePaths([]);
         return;
       }
 
       const paths: string[] = [];
+      const currentSlice = nv.scene.crosshairPos; // [fX, fY, fZ] in frac
+      const currentPlane = nv.opts.sliceType;
+
       currentAnnotations.forEach((ann) => {
         if (!ann.points || ann.points.length === 0) return;
 
+        // Filtering by plane
+        const annPlane = ann.plane.toLowerCase();
+        let isCorrectPlane = false;
+        if (currentPlane === SLICE_TYPE.AXIAL && (annPlane === "axial" || annPlane === "poprzeczna")) isCorrectPlane = true;
+        if (currentPlane === SLICE_TYPE.CORONAL && (annPlane === "coronal" || annPlane === "czolowa")) isCorrectPlane = true;
+        if (currentPlane === SLICE_TYPE.SAGITTAL && (annPlane === "sagittal" || annPlane === "strzalkowa")) isCorrectPlane = true;
+        if (currentPlane === SLICE_TYPE.MULTIPLANAR) isCorrectPlane = true;
+
+        if (!isCorrectPlane) return;
+
+        // Filtering by slice (within 1mm or same index)
+        // This is tricky in multiplanar. For now, let's just project everything if Multiplanar
+        // But for 2D views, let's be strict.
+
         let pathData = "";
         ann.points.forEach((pt: number[], i: number) => {
-          const volume = (nv as any).volumes?.[0];
-          const matrix = volume?.matRAS;
-          if (!matrix) return;
+          // pt is [voxX, voxY]
           try {
-            const mm = (nv as any).vox2mm([pt[0], pt[1], ann.slice_index ?? 0], matrix);
-            const frac = (nv as any).mm2frac(mm);
+            // Convert [voxX, voxY, ann.slice_index] to canvas coordinates
+            const vox = [pt[0], pt[1], ann.slice_index];
+
+            // Check if slice is visible
+            // nv.vox2frac(vox) gives [fX, fY, fZ]
+            const frac = (nv as any).vox2frac(vox);
+
+            // In 2D view, we only show if the Z-index (or whatever index matches the plane) is near the current crosshair
+            if (currentPlane !== SLICE_TYPE.MULTIPLANAR && currentPlane !== SLICE_TYPE.RENDER) {
+              let match = false;
+              if (currentPlane === SLICE_TYPE.AXIAL && Math.abs(frac[2] - currentSlice[2]) < 0.01) match = true;
+              if (currentPlane === SLICE_TYPE.CORONAL && Math.abs(frac[1] - currentSlice[1]) < 0.01) match = true;
+              if (currentPlane === SLICE_TYPE.SAGITTAL && Math.abs(frac[0] - currentSlice[0]) < 0.01) match = true;
+              if (!match) return;
+            }
+
             const canvas = (nv as any).canvas;
             let canvasPos: [number, number] | null = null;
-            if (canvas && frac && frac.length >= 2) {
-              canvasPos = [frac[0] * canvas.width, (1 - frac[1]) * canvas.height];
-            }
-            if (canvasPos) {
-              if (i === 0) pathData += `M ${canvasPos[0]} ${canvasPos[1]}`;
-              else pathData += ` L ${canvasPos[0]} ${canvasPos[1]}`;
+
+            // NiiVue's internal projection to canvas depends on current view
+            // Using nv.mm2canvas or similar would be better but NiiVue API varies.
+            // Let's use the native method if available or our frac calculation
+
+            // Simplified: only show on correct plane view
+            const screenPos = (nv as any).frac2canvas(frac);
+            if (screenPos) {
+              if (i === 0) pathData += `M ${screenPos[0]} ${screenPos[1]}`;
+              else pathData += ` L ${screenPos[0]} ${screenPos[1]}`;
             }
           } catch (e) {
             console.warn("Error calculating annotation path:", e);
           }
         });
-        paths.push(pathData);
+        if (pathData) paths.push(pathData);
       });
       setOutlinePaths(paths);
     };
@@ -248,7 +285,15 @@ export const NiiVue = React.forwardRef<NiiVueHandle, NiiVueProps>(
           isDrawing = false;
           setCurrentPath(""); // Clear current drawing
           if (onAnnotationCreatedRef.current && localPoints.length > 0) {
-            onAnnotationCreatedRef.current(localPoints, 0);
+            // Find current slice index from NiiVue
+            const frac = nv.scene.crosshairPos;
+            const vox = nv.frac2vox(frac);
+            // Index depends on plane. If Axial, slice is vox[2]
+            let sliceIdx = vox[2];
+            if (nv.opts.sliceType === SLICE_TYPE.CORONAL) sliceIdx = vox[1];
+            if (nv.opts.sliceType === SLICE_TYPE.SAGITTAL) sliceIdx = vox[0];
+
+            onAnnotationCreatedRef.current(localPoints, sliceIdx);
           }
         }
         if (isMoving) {
@@ -273,7 +318,14 @@ export const NiiVue = React.forwardRef<NiiVueHandle, NiiVueProps>(
           e.preventDefault();
 
           isDrawing = true;
-          localPoints = [[x, y]];
+          // IMPORTANT: Convert canvas (x,y) to VOXEL coordinates
+          const frac = (nv as any).canvas2frac([x, y]);
+          const vox = nv.frac2vox(frac);
+          // We only store [voxX, voxY] because sliceIdx is passed separately
+          // But wait, NiiVue's canvas2frac is view-dependent.
+          // If we are in Axial view, frac[0,1] correspond to X,Y
+
+          localPoints = [[vox[0], vox[1]]];
           currentDrawPath = `M ${x} ${y}`;
           setCurrentPath(currentDrawPath);
         }
@@ -334,29 +386,41 @@ export const NiiVue = React.forwardRef<NiiVueHandle, NiiVueProps>(
 
           if (dMode === 4) {
             // Pen path
-            localPoints.push([x, y]);
+            const frac = (nv as any).canvas2frac([x, y]);
+            const vox = nv.frac2vox(frac);
+            localPoints.push([vox[0], vox[1]]);
+
             currentDrawPath += ` L ${x} ${y}`;
             setCurrentPath(currentDrawPath);
           } else if (dMode === 5) {
             // Circle preview: localPoints[0] is center, [x,y] is perimeter point
-            const center = localPoints[0];
-            const radius = Math.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2);
-            // Represent circle as a path of many points for compatibility, or special marker
-            // For now, let's just generate a path-based circle
+            // We need to store center in canvas coordinates for preview
+            // But localPoints[0] is voxels. We need to convert it back or store it.
+            // Let's use a simpler approach: get center from first click.
+            // We need to keep center in canvas coords for the preview path string.
+
+            const startFrac = (nv as any).vox2frac([localPoints[0][0], localPoints[0][1], 0]); // dummy slice
+            const startCanvas = (nv as any).frac2canvas(startFrac);
+            if (!startCanvas) return;
+
+            const centerX = startCanvas[0];
+            const centerY = startCanvas[1];
+            const radius = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+
             let circlePath = "";
             const segments = 32;
-            for (let i = 0; i <= segments; i++) {
-              const angle = (i / segments) * Math.PI * 2;
-              const px = center[0] + radius * Math.cos(angle);
-              const py = center[1] + radius * Math.sin(angle);
-              circlePath += (i === 0 ? "M " : " L ") + `${px} ${py}`;
-            }
-            // Update localPoints to store the circle's path for saving
-            // Re-generate localPoints array from the segments too
             localPoints = [];
             for (let i = 0; i <= segments; i++) {
               const angle = (i / segments) * Math.PI * 2;
-              localPoints.push([center[0] + radius * Math.cos(angle), center[1] + radius * Math.sin(angle)]);
+              const px = centerX + radius * Math.cos(angle);
+              const py = centerY + radius * Math.sin(angle);
+
+              circlePath += (i === 0 ? "M " : " L ") + `${px} ${py}`;
+
+              // Store as VOXEL coordinates
+              const cFrac = (nv as any).canvas2frac([px, py]);
+              const cVox = nv.frac2vox(cFrac);
+              localPoints.push([cVox[0], cVox[1]]);
             }
             setCurrentPath(circlePath);
           }
