@@ -51,13 +51,18 @@
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
+    "@types/node": "^25.2.3",
     "baseline-browser-mapping": "^2.9.11",
     "concurrently": "^9.2.1"
   },
   "jest": {
     "moduleNameMapper": {
+      "^axios$": "axios/dist/node/axios.cjs",
       "^@components/(.*)$": "<rootDir>/src/components/$1"
-    }
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!axios|@niivue/niivue|gl-matrix|@mui/material|@emotion/react|@emotion/styled)"
+    ]
   },
   "compilerOptions": {
     "baseUrl": "src",

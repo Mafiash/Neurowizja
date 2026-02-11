@@ -8,7 +8,7 @@ import requests
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Form
 from sqlalchemy.orm import Session
 
-from brain_view_api.db.database import SessionLocal, get_db
+from brain_view_api.db.database import get_session_local, get_db
 from brain_view_api.models.mri_image import MedicalScan, Annotation, Plane, Comment
 from brain_view_api.models.user import User
 from brain_view_api.schemas.schemas import (
@@ -205,13 +205,14 @@ async def create_annotation(
             scan_id=ann.scan_id,
             author_id=ann.author_id,
             author_name=user.email,
-            slice_index=ann.slice_index,
+            slice=ann.slice,
             plane=str(ann.plane),
             blob_path=ann.blob_path,
             snapshot_path=ann.snapshot_path,
             snapshot_url=snapshot_url,
             note_text=ann.note_text,
             points=data.points,
+            viewer_state=data.viewer_state,
             comments=[],
             created_at=ann.created_at
         )
@@ -251,7 +252,7 @@ def get_annotations(scan_id: int, db: Session = Depends(get_db)):
             scan_id=ann.scan_id,
             author_id=ann.author_id,
             author_name=email,
-            slice_index=ann.slice_index,
+            slice=ann.slice,
             plane=str(ann.plane),
             blob_path=ann.blob_path,
             snapshot_path=ann.snapshot_path,
@@ -277,7 +278,9 @@ def get_annotations(scan_id: int, db: Session = Depends(get_db)):
             # Używamy sesji requests dla lepszej wydajności w pętli
             r = requests.get(sas_url, timeout=1.5) 
             if r.status_code == 200:
-                dto.points = r.json().get("points")
+                payload = r.json()
+                dto.points = payload.get("points")
+                dto.viewer_state = payload.get("viewer_state")
             else:
                 print(f"⚠️ Nie udało się pobrać punktów dla adnotacji {ann.id}: Status {r.status_code}")
         except Exception as e:
@@ -313,7 +316,7 @@ def get_all_annotations(db: Session = Depends(get_db)):
             author_id=ann.author_id,
             author_name=email,
             scan_filename=scan_file,
-            slice_index=ann.slice_index,
+            slice=ann.slice,
             plane=str(ann.plane),
             blob_path=ann.blob_path,
             snapshot_path=ann.snapshot_path,
@@ -449,7 +452,7 @@ def generate_outline(
             scan_id=ann.scan_id,
             author_id=ann.author_id,
             author_name=user.email,
-            slice_index=ann.slice_index,
+            slice=ann.slice,
             plane=str(ann.plane),
             blob_path=ann.blob_path,
             note_text=ann.note_text,

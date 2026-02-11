@@ -1,7 +1,5 @@
-import { Box, Typography, Button, Paper, Grid, Card, CardContent, CardHeader, Avatar } from "@mui/material";
+import { Box, Typography, Button, Grid, Card, CardContent } from "@mui/material";
 import React from "react";
-import AutoGraphIcon from "@mui/icons-material/AutoGraph";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
 

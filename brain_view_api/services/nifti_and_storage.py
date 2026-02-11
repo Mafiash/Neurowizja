@@ -7,7 +7,7 @@ import nibabel as nib
 from azure.storage.blob import BlobServiceClient, BlobSasPermissions, generate_blob_sas
 from sqlalchemy.orm import Session
 
-from brain_view_api.db.database import storage_conn_str, container_name, SessionLocal
+from brain_view_api.db.database import storage_conn_str, container_name, get_session_local
 from brain_view_api.models.mri_image import MedicalScan, Annotation, Plane
 from brain_view_api.models.user import User
 from brain_view_api.schemas.schemas import AnnotationCreateDTO
@@ -160,6 +160,7 @@ class AnnotationManager:
             "plane": data.plane,
             "points": data.points,
             "note": data.note,
+            "viewer_state": data.viewer_state,
             "author": getattr(user, "email", None) or getattr(user, "username", None),
             "created_at": datetime.utcnow().isoformat(),
         }
@@ -199,7 +200,7 @@ class AnnotationManager:
             ann = Annotation(
                 scan_id=data.scan_id,
                 author_id=user.id,
-                slice_index=data.slice,
+                slice=data.slice,
                 plane=plane_enum,
                 blob_path=json_filename,
                 snapshot_path=snapshot_path,

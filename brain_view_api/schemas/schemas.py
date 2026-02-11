@@ -25,10 +25,11 @@ class ScanMetadataDTO(BaseModel):
 
 class AnnotationCreateDTO(BaseModel):
     scan_id: int
-    slice: int
+    slice: float
     plane: Literal["strzalkowa", "czolowa", "poprzeczna", "axial", "coronal", "sagittal"]
     points: List[List[float]]  # [[x,y], [x,y], ...]
     note: Optional[str] = None
+    viewer_state: Optional[dict] = None  # Generic dict for UI state
 
 
 class CommentCreateDTO(BaseModel):
@@ -52,13 +53,14 @@ class AnnotationDTO(BaseModel):
     scan_id: int
     author_id: int
     author_name: Optional[str] = None # Nowa kolumna
-    slice_index: int
+    slice: float
     plane: str
     blob_path: str
     snapshot_path: Optional[str] = None # Sciezka do screenshota
     snapshot_url: Optional[str] = None # URL SAS do screenshota
     note_text: Optional[str]
     points: Optional[List[List[float]]] = None # Nowe pole z danymi obrysu
+    viewer_state: Optional[dict] = None # Zapisany stan przeglądarki
     comments: List[CommentDTO] = []
     created_at: datetime
 

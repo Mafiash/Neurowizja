@@ -1,0 +1,13 @@
+.git
+.gitignore
+.gcloudignore
+node_modules
+build
+venv
+__pycache__
+.vscode
+.pytest_cache
+*.db
+*.nii
+*.pdf
+*.png

@@ -44,6 +44,7 @@ export interface AnnotationDTO {
   snapshot_url?: string;
   note_text: string | null;
   points?: number[][];
+  viewer_state?: any;
   comments: CommentDTO[];
   created_at: string;
 }
@@ -55,6 +56,7 @@ export interface AnnotationCreateDTO {
   plane: string;
   points: number[][];
   note?: string;
+  viewer_state?: any;
 }
 
 // AnnotationExtendedDTO z backendu

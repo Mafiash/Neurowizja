@@ -22,55 +22,63 @@ password = os.getenv("DB_USERNAME_PASSWORD")
 storage_conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 container_name = os.getenv("AZURE_CONTAINER_NAME")
 
+print(f"🔍 Startup Config: SERVER={server}, DB={database}, USER={username}")
+print(f"🔍 Storage Config: CONTAINER={container_name}, STORAGE_ENV_SET={'Yes' if storage_conn_str else 'No'}")
+
 # --- 2. KONFIGURACJA BAZY DANYCH ---
 def create_app_engine():
     import urllib.parse
-    import socket
     driver = "ODBC Driver 18 for SQL Server"
     
-    # Próba rozwiązania nazwy hosta na IP
-    try:
-        target_server = socket.gethostbyname(server) if server else None
-        print(f"🌐 Resolved {server} to {target_server}")
-    except Exception as e:
-        print(f"⚠️ DNS resolution failed for {server}: {e}. Using fallback IP 20.62.58.131")
-        target_server = "20.62.58.131"
-        
-    user_full = f"{username}@{server.split('.')[0]}"
+    print(f"🔗 Łączenie z SQL: SERVER={server}, DB={database}, USER={username}")
     
     params = urllib.parse.quote_plus(
         f"DRIVER={{{driver}}};"
-        f"SERVER={target_server};"
+        f"SERVER={server};"
         f"DATABASE={database};"
-        f"UID={user_full};"
+        f"UID={username};"
         f"PWD={password};"
-        f"Encrypt=yes;"
-        f"TrustServerCertificate=yes;"
-        f"Connection Timeout=30;"
+        "Encrypt=yes;"
+        "TrustServerCertificate=yes;"
+        "Connection Timeout=30;"
     )
     conn_str = f"mssql+pyodbc:///?odbc_connect={params}"
     
-    return create_engine(conn_str)
+    return create_engine(conn_str, pool_pre_ping=True)
 
 
 
-engine = create_app_engine()
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Globalne zmienne, które zainicjujemy później
+_engine = None
+_SessionLocal = None
+
+def get_engine():
+    global _engine
+    if _engine is None:
+        _engine = create_app_engine()
+    return _engine
+
+def get_session_local():
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+    return _SessionLocal
+
 Base = declarative_base()
 
 def init_db():
-    # Importy wewnątrz funkcji zapobiegają circular import
     from brain_view_api.models import user, mri_image
     try:
-        Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=get_engine())
         print("📋 Tabele bazy danych (Users, Sessions, MedicalScans, Annotations) są gotowe.")
     except Exception as e:
         print(f"⚠️ Błąd podczas tworzenia tabel: {e}")
 
-# Inicjalizacja przy imporcie modułu
-init_db()
+# Inicjalizacja przy imporcie modułu – usunięto automatyczne wywołanie init_db()
+# init_db() 
 
 def get_db():
+    SessionLocal = get_session_local()
     db = SessionLocal()
     try:
         yield db

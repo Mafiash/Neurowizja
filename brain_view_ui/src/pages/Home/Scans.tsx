@@ -7,14 +7,11 @@ import {
   CircularProgress,
   ToggleButtonGroup,
   ToggleButton,
-  FormControl,
-  InputLabel,
   Select,
   MenuItem,
   TextField,
   Divider,
   List,
-  ListItem,
   ListItemButton,
   ListItemText,
   Paper,
@@ -61,7 +58,7 @@ export const Scans: React.FC = () => {
 
   // Notes & History
   const [note, setNote] = useState("");
-  const [capturedStrokes, setCapturedStrokes] = useState<number[][][]>([]);
+  const [capturedStrokes, setCapturedStrokes] = useState<Array<{ points: number[][]; color: string; width: number }>>([]);
   const [capturedSlice, setCapturedSlice] = useState<number>(0);
   const [annotations, setAnnotations] = useState<AnnotationDTO[]>([]);
 
@@ -141,8 +138,9 @@ export const Scans: React.FC = () => {
           scan_id: selectedScanId,
           slice: capturedSlice,
           plane: slicePlane,
-          points: capturedStrokes.length > 0 ? capturedStrokes.flat() : [],
+          points: capturedStrokes.length > 0 ? capturedStrokes.flatMap((s) => s.points) : [],
           note: note,
+          viewer_state: niiVueRef.current?.getViewerState(),
         },
         screenshotElem,
       ); // Pass screenshot blob
@@ -161,7 +159,9 @@ export const Scans: React.FC = () => {
   const handleUpdateAnnotation = (index: number, points: number[][]) => {
     setCapturedStrokes((prev) => {
       const next = [...prev];
-      next[index] = points;
+      if (next[index]) {
+        next[index] = { ...next[index], points };
+      }
       return next;
     });
   };
@@ -351,7 +351,7 @@ export const Scans: React.FC = () => {
                     />
                   </Box>
                   <Box sx={{ width: 60, display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Slider size="small" min={1} max={15} value={penWidth} onChange={(_, v) => setPenWidth(v as number)} valueLabelDisplay="auto" sx={{ color: "black" }} />
+                    <Slider size="small" min={1} max={20} value={penWidth} onChange={(_, v) => setPenWidth(v as number)} valueLabelDisplay="auto" sx={{ color: "black" }} />
                   </Box>
                 </Box>
               </>
@@ -443,8 +443,8 @@ export const Scans: React.FC = () => {
                 penColor={penColor}
                 penWidth={penWidth}
                 pendingStrokes={capturedStrokes}
-                onAnnotationCreated={(pts, sliceIdx) => {
-                  setCapturedStrokes((prev) => [...prev, pts]);
+                onAnnotationCreated={(pts, sliceIdx, color, width) => {
+                  setCapturedStrokes((prev) => [...prev, { points: pts, color, width }]);
                   setCapturedSlice(sliceIdx);
                 }}
                 onUpdateAnnotation={handleUpdateAnnotation}
@@ -517,7 +517,21 @@ export const Scans: React.FC = () => {
                   <Paper
                     key={ann.id}
                     variant="outlined"
-                    onClick={() => ann.snapshot_url && setPreviewImage(ann.snapshot_url)} // Click to preview
+                    onClick={() => {
+                      if (ann.snapshot_url) setPreviewImage(ann.snapshot_url);
+
+                      // Restore viewer state
+                      if (ann.viewer_state) {
+                        niiVueRef.current?.setViewerState(ann.viewer_state);
+                      }
+                      if (ann.plane) {
+                        const p = ann.plane.toLowerCase();
+                        if (p === "axial" || p === "poprzeczna") setSlicePlane("axial");
+                        else if (p === "coronal" || p === "czolowa") setSlicePlane("coronal");
+                        else if (p === "sagittal" || p === "strzalkowa") setSlicePlane("sagittal");
+                      }
+                      setViewMode("2d"); // Switch to 2D for specific slice viewing
+                    }}
                     sx={{
                       p: 1.5,
                       position: "relative",

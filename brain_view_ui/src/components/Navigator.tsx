@@ -10,7 +10,6 @@ import {
   Box,
   Typography,
   IconButton,
-  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,

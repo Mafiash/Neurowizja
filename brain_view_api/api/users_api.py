@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
@@ -12,22 +13,35 @@ from fastapi import UploadFile, File
 import uuid
 
 def seed_admin(db: Session):
-    admin_exists = db.query(User).filter(User.email == "admin").first()
-    if not admin_exists:
-        print("👤 Tworzenie konta administratora...")
+    admin_email = os.getenv("ADMIN_EMAIL", "lekarz-specjalista")
+    admin_password = os.getenv("ADMIN_PASSWORD", "BardzoTrudneHaslo123!") # Hasło domyślne jeśli zapomnisz ustawić env
+    
+    # 1. Usuwamy starego, niebezpiecznego admina jeśli istnieje
+    old_admin = db.query(User).filter(User.email == "admin").first()
+    if old_admin and old_admin.email != admin_email:
+        print("🗑️ Usuwanie starego konta 'admin' oraz jego sesji...")
+        # Usuwamy sesje powiązane ze starym adminem
+        db.query(DBSession).filter(DBSession.user_id == old_admin.id).delete()
+        db.delete(old_admin)
+        db.commit()
+
+    # 2. Tworzymy lub aktualizujemy bezpiecznego użytkownika
+    admin = db.query(User).filter(User.email == admin_email).first()
+    if not admin:
+        print(f"👤 Tworzenie bezpiecznego konta: {admin_email}...")
         admin = User(
-            email="admin",
-            password_hash=hash_password("admin"),
+            email=admin_email,
+            password_hash=hash_password(admin_password),
             role=UserRole.LEKARZ,
             is_admin=True
         )
         db.add(admin)
-        db.commit()
     else:
-        # Upewnij się że ma uprawnienia admina
-        if not admin_exists.is_admin:
-            admin_exists.is_admin = True
-            db.commit()
+        print(f"🔄 Aktualizacja hasła dla konta: {admin_email}...")
+        admin.password_hash = hash_password(admin_password)
+        admin.is_admin = True
+    
+    db.commit()
 
 router = APIRouter(prefix="/users", tags=["users"])
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  

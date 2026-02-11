@@ -5,6 +5,7 @@ from enum import Enum
 from sqlalchemy import (
     Column,
     Integer,
+    Float,
     String,
     DateTime,
     ForeignKey,
@@ -55,7 +56,7 @@ class Annotation(Base):
     scan_id = Column(Integer, ForeignKey("MedicalScans.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
 
-    slice_index = Column(Integer, nullable=False)
+    slice = Column("slice_index", Float, nullable=False)
     plane = Column(SAEnum(Plane), nullable=False)
 
     # ścieżka/nazwa bloba JSON w Azure (z punktami obrysu)

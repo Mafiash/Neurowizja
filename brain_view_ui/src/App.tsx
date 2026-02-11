@@ -8,6 +8,7 @@ import { Scans } from "./pages/Home/Scans.tsx";
 import { Annotations } from "./pages/Home/Annotations.tsx";
 import AdminPanel from "./pages/Admin/AdminPanel.tsx";
 import Navigator from "./components/Navigator.tsx";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 // Create a premium, modern theme
 const theme = createTheme({
@@ -66,26 +67,6 @@ const theme = createTheme({
     },
   },
 });
-
-interface ProtectedRouteProps {
-  children: React.ReactElement;
-  adminOnly?: boolean;
-}
-
-const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
-  const token = localStorage.getItem("token");
-  const isAdmin = localStorage.getItem("is_admin") === "true";
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/home" replace />;
-  }
-
-  return children;
-};
 
 function Layout() {
   return (

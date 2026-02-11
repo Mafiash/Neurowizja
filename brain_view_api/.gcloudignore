@@ -1,0 +1,11 @@
+.git
+.gitignore
+.gcloudignore
+node_modules
+venv
+__pycache__
+*.db
+*.nii
+*.pdf
+*.png
+.pytest_cache
