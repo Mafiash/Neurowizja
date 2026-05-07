@@ -203,9 +203,9 @@ Aplikacja nie dokonuje automatycznej interpretacji ani diagnozy na podstawie dan
 
 1. Logowanie: diagram przedstawia proces logowania. Najpierw użytkownik wpisuje login oraz hasło a następnie system sprawdza czy dane są poprawne. 
 
-   ![][images/image1.png]
+   ![](images/image1.png)
 
-   ![][images/image2]
+   ![](images/image2.png)
 
    ![][image3]
 
