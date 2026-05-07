@@ -207,15 +207,15 @@ Aplikacja nie dokonuje automatycznej interpretacji ani diagnozy na podstawie dan
 
    ![](images/image2.png)
 
-   ![][image3]
+   ![](images/image3.png)
 
    
 
 2. Wgrywanie i pobieranie plików: diagram przedstawia proces wgrywania plików do programu oraz ich pobierania z bazy danych. Podczas wgrywania pliku system sprawdza czy jest on w poprawnym formacie.
 
-   ![][image4]
+   ![](images/image4.png)
 
-   ![][image5]
+   ![](images/image5.png)
 
    
 
@@ -261,11 +261,11 @@ Aplikacja nie dokonuje automatycznej interpretacji ani diagnozy na podstawie dan
 
 3. Operacje na widokach 2D oraz 3D: diagram przedstawia czynności które użytkownik może wykonać podczas korzystania z danego widoku. Widoki oferują funkcje zawarte w punktach 2 oraz 3 dokumentacji.
 
-   ![][image6]
+   ![](images/image6.png)
 
-   ![][image7]
+   ![](images/image7.png)
 
-   ![][image8]
+   ![](images/image8.png)
 
    
 
@@ -325,9 +325,9 @@ Aplikacja nie dokonuje automatycznej interpretacji ani diagnozy na podstawie dan
 
    
 
-   ![][image9]
+   ![](images/image9.png)
 
-   ![][image10]
+   ![](images/image10.png)
 
    
 
@@ -339,21 +339,21 @@ Aplikacja jest oparta na architekturze klient-serwer. Server dzieli się na Mode
 
 Client odpowiada za renderowanie widoków i ich przetrzymywanie po wysłaniu zapytania do serwera
 
-![][image11]
+![](images/image11.png)
 
-![][image12]
+![](images/image12.png)
 
-![][image13]
+![](images/image13.png)
 
 6. ## **Diagramy sekwencji**
 
 1. Diagram sekwencji pobrania skanu:
 
-![][image14]
+![](images/image14.png)
 
 2. Diagram sekwencji stworzenia adnotacji:
 
-![][image15]
+![](images/image15.png)
 
 7. ## **Testy**
 
