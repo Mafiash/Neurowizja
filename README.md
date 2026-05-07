@@ -203,19 +203,19 @@ Aplikacja nie dokonuje automatycznej interpretacji ani diagnozy na podstawie dan
 
 1. Logowanie: diagram przedstawia proces logowania. Najpierw użytkownik wpisuje login oraz hasło a następnie system sprawdza czy dane są poprawne. 
 
-   ![](images/image1.png)
-
-   ![](images/image2.png)
-
    ![](images/image3.png)
+
+   ![](images/image13.png)
+
+   ![](images/image6.png)
 
    
 
 2. Wgrywanie i pobieranie plików: diagram przedstawia proces wgrywania plików do programu oraz ich pobierania z bazy danych. Podczas wgrywania pliku system sprawdza czy jest on w poprawnym formacie.
 
-   ![](images/image4.png)
+   ![](images/image15.png)
 
-   ![](images/image5.png)
+   ![](images/image2.png)
 
    
 
@@ -261,11 +261,11 @@ Aplikacja nie dokonuje automatycznej interpretacji ani diagnozy na podstawie dan
 
 3. Operacje na widokach 2D oraz 3D: diagram przedstawia czynności które użytkownik może wykonać podczas korzystania z danego widoku. Widoki oferują funkcje zawarte w punktach 2 oraz 3 dokumentacji.
 
-   ![](images/image6.png)
+   ![](images/image10.png)
 
    ![](images/image7.png)
 
-   ![](images/image8.png)
+   ![](images/image14.png)
 
    
 
@@ -327,7 +327,7 @@ Aplikacja nie dokonuje automatycznej interpretacji ani diagnozy na podstawie dan
 
    ![](images/image9.png)
 
-   ![](images/image10.png)
+   ![](images/image1.png)
 
    
 
@@ -339,21 +339,21 @@ Aplikacja jest oparta na architekturze klient-serwer. Server dzieli się na Mode
 
 Client odpowiada za renderowanie widoków i ich przetrzymywanie po wysłaniu zapytania do serwera
 
-![](images/image11.png)
+![](images/image4.png)
 
 ![](images/image12.png)
 
-![](images/image13.png)
+![](images/image5.png)
 
 6. ## **Diagramy sekwencji**
 
 1. Diagram sekwencji pobrania skanu:
 
-![](images/image14.png)
+![](images/image8.png)
 
 2. Diagram sekwencji stworzenia adnotacji:
 
-![](images/image15.png)
+![](images/image11.png)
 
 7. ## **Testy**
 
